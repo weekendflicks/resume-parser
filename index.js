@@ -14,36 +14,44 @@ app.post("/parse-resume", upload.single("resume"), async (req, res) => {
 
   try {
     const fileExt = path.extname(file.originalname).toLowerCase();
+    const fileBuffer = await fs.readFile(file.path);
     let text = "";
 
     if (fileExt === ".pdf") {
-      const data = await fs.readFile(file.path);
-      const parsed = await pdfParse(data);
+      const parsed = await pdfParse(fileBuffer);
       text = parsed.text;
     } else if (fileExt === ".docx") {
-      const data = await fs.readFile(file.path);
-      const result = await mammoth.extractRawText({ buffer: data });
+      const result = await mammoth.extractRawText({ buffer: fileBuffer });
       text = result.value;
     } else if (fileExt === ".txt") {
-      text = await fs.readFile(file.path, "utf-8");
+      text = fileBuffer.toString("utf-8");
     } else {
       return res.status(400).json({ error: "Unsupported file type" });
     }
 
-    res.json({ text });
+    if (!text || text.trim().length < 50) {
+      return res.status(400).json({ error: "Resume text too short or empty" });
+    }
+
+    res.status(200).json({ text });
   } catch (err) {
     console.error("Parsing error:", err);
     res.status(500).json({ error: "Failed to parse resume" });
   } finally {
-    await fs.unlink(file.path);
+    // Always clean up uploaded temp file
+    try {
+      await fs.unlink(file.path);
+    } catch (cleanupErr) {
+      console.warn("Failed to delete temp file:", cleanupErr);
+    }
   }
 });
 
 app.get("/", (req, res) => {
-  res.send("Resume parser is running.");
+  res.send("✅ Resume parser is running.");
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
