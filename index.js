@@ -1,22 +1,19 @@
 import express from "express";
+import cors from "cors";
 import multer from "multer";
-import pdfParse from "pdf-parse";
 import mammoth from "mammoth";
 import fs from "fs/promises";
 import path from "path";
-import cors from "cors"; // ✅ added cors
 
 const app = express();
 const upload = multer({ dest: "uploads/" });
 
-// ✅ Enable CORS
-app.use(
-  cors({
-    origin: "*", // Replace with your frontend URL in production
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type"],
-  })
-);
+// ✅ Enable CORS for all origins (modify in production as needed)
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type']
+}));
 
 app.post("/parse-resume", upload.single("resume"), async (req, res) => {
   const file = req.file;
@@ -28,6 +25,7 @@ app.post("/parse-resume", upload.single("resume"), async (req, res) => {
     let text = "";
 
     if (fileExt === ".pdf") {
+      const pdfParse = (await import("pdf-parse")).default; // ✅ Dynamic import
       const parsed = await pdfParse(fileBuffer);
       text = parsed.text;
     } else if (fileExt === ".docx") {
@@ -49,7 +47,7 @@ app.post("/parse-resume", upload.single("resume"), async (req, res) => {
     res.status(500).json({ error: "Failed to parse resume" });
   } finally {
     try {
-      await fs.unlink(file.path); // Clean up temp file
+      await fs.unlink(file.path);
     } catch (cleanupErr) {
       console.warn("Failed to delete temp file:", cleanupErr);
     }
