@@ -4,9 +4,19 @@ import pdfParse from "pdf-parse";
 import mammoth from "mammoth";
 import fs from "fs/promises";
 import path from "path";
+import cors from "cors"; // ✅ added cors
 
 const app = express();
 const upload = multer({ dest: "uploads/" });
+
+// ✅ Enable CORS
+app.use(
+  cors({
+    origin: "*", // Replace with your frontend URL in production
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type"],
+  })
+);
 
 app.post("/parse-resume", upload.single("resume"), async (req, res) => {
   const file = req.file;
@@ -38,9 +48,8 @@ app.post("/parse-resume", upload.single("resume"), async (req, res) => {
     console.error("Parsing error:", err);
     res.status(500).json({ error: "Failed to parse resume" });
   } finally {
-    // Always clean up uploaded temp file
     try {
-      await fs.unlink(file.path);
+      await fs.unlink(file.path); // Clean up temp file
     } catch (cleanupErr) {
       console.warn("Failed to delete temp file:", cleanupErr);
     }
