@@ -8,19 +8,19 @@ import path from "path";
 const app = express();
 const upload = multer({ dest: "uploads/" });
 
-// ✅ CORS for all origins — safe for dev, customize for prod
+// ✅ CORS for all origins — dev safe
 app.use(cors({
   origin: (origin, callback) => callback(null, origin || "*"),
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type"]
 }));
 
-// ✅ Health check route so Render can ping it (and prevent 404)
+// ✅ Root route for Render cold-start and health checks
 app.get("/", (req, res) => {
   res.status(200).send("✅ Resume parser is running.");
 });
 
-// ✅ Parse resume endpoint
+// ✅ Parse uploaded resume
 app.post("/parse-resume", upload.single("resume"), async (req, res) => {
   const file = req.file;
   if (!file) return res.status(400).json({ error: "No file uploaded" });
@@ -60,8 +60,9 @@ app.post("/parse-resume", upload.single("resume"), async (req, res) => {
   }
 });
 
-// ✅ Start server with dynamic port for Render
+// ✅ Required by Render: dynamic port binding
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
+
