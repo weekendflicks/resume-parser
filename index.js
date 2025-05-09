@@ -8,13 +8,19 @@ import path from "path";
 const app = express();
 const upload = multer({ dest: "uploads/" });
 
-// ✅ Enable CORS for all origins (modify in production as needed)
+// ✅ CORS for all origins — safe for dev, customize for prod
 app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type']
+  origin: (origin, callback) => callback(null, origin || "*"),
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type"]
 }));
 
+// ✅ Health check route so Render can ping it (and prevent 404)
+app.get("/", (req, res) => {
+  res.status(200).send("✅ Resume parser is running.");
+});
+
+// ✅ Parse resume endpoint
 app.post("/parse-resume", upload.single("resume"), async (req, res) => {
   const file = req.file;
   if (!file) return res.status(400).json({ error: "No file uploaded" });
@@ -25,7 +31,7 @@ app.post("/parse-resume", upload.single("resume"), async (req, res) => {
     let text = "";
 
     if (fileExt === ".pdf") {
-      const pdfParse = (await import("pdf-parse")).default; // ✅ Dynamic import
+      const pdfParse = (await import("pdf-parse")).default;
       const parsed = await pdfParse(fileBuffer);
       text = parsed.text;
     } else if (fileExt === ".docx") {
@@ -54,10 +60,7 @@ app.post("/parse-resume", upload.single("resume"), async (req, res) => {
   }
 });
 
-app.get("/", (req, res) => {
-  res.send("✅ Resume parser is running.");
-});
-
+// ✅ Start server with dynamic port for Render
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
